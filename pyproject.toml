@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "notionpub"
+version = "0.1.0"
+description = "publish files to notion"
+authors = ["Tyler M. Kontra <tyler@tylerkontra.com>"]
+license = "GPL"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+notion = "^0.0.28"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
