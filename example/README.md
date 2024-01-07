@@ -1,0 +1,1 @@
+this is intended to be a realistic example of a github repository and different uses for notionpub
