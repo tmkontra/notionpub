@@ -26,10 +26,9 @@ from .utils import (
 
 
 class Children(object):
-
     child_list_key = "content"
 
-    def __init__(self, parent):
+    def __init__(self, parent: "Block"):
         self._parent = parent
         self._client = parent._client
 
@@ -50,7 +49,6 @@ class Children(object):
         return self._parent.get(self.child_list_key) or []
 
     def _get_block(self, id):
-
         block = self._client.get_block(id)
 
         # TODO: this is needed because there seems to be a server-side race condition with setting and getting data
@@ -201,7 +199,6 @@ class Block(Record):
 
     @property
     def parent(self):
-
         if not self.is_alias:
             parent_id = self.get("parent_id")
             parent_table = self.get("parent_table")
@@ -245,7 +242,6 @@ class Block(Record):
         return mappers
 
     def _convert_diff_to_changelist(self, difference, old_val, new_val):
-
         mappers = self._get_mappers()
         changed_fields = set()
         changes = []
@@ -282,7 +278,6 @@ class Block(Record):
             remaining.append(d)
 
         if content_changed:
-
             old = deepcopy(old_val.get("content", []))
             new = deepcopy(new_val.get("content", []))
 
@@ -319,10 +314,8 @@ class Block(Record):
         """
 
         if not self.is_alias:
-
             # If it's not an alias, we actually remove the block
             with self._client.as_atomic_transaction():
-
                 # Mark the block as inactive
                 self._client.submit_transaction(
                     build_operation(
@@ -350,7 +343,6 @@ class Block(Record):
                 del self._client._store._values["block"][block_id]
 
         else:
-
             # Otherwise, if it's an alias, we only remove it from the alias parent's content list
             self._client.submit_transaction(
                 build_operation(
@@ -384,7 +376,6 @@ class Block(Record):
             list_args[position] = target_block.id
 
         with self._client.as_atomic_transaction():
-
             # First, remove the node, before we re-insert and re-activate it at the target location
             self.remove()
 
@@ -427,7 +418,6 @@ class Block(Record):
 
 
 class DividerBlock(Block):
-
     _type = "divider"
 
 
@@ -455,7 +445,6 @@ class ColumnBlock(Block):
 
 
 class BasicBlock(Block):
-
     title = property_map("title")
     title_plaintext = property_map(
         "title",
@@ -480,7 +469,6 @@ class BasicBlock(Block):
 
 
 class TodoBlock(BasicBlock):
-
     _type = "to_do"
 
     checked = property_map(
@@ -494,7 +482,6 @@ class TodoBlock(BasicBlock):
 
 
 class CodeBlock(BasicBlock):
-
     _type = "code"
 
     language = property_map("language")
@@ -510,22 +497,18 @@ class FactoryBlock(BasicBlock):
 
 
 class HeaderBlock(BasicBlock):
-
     _type = "header"
 
 
 class SubheaderBlock(BasicBlock):
-
     _type = "sub_header"
 
 
 class SubsubheaderBlock(BasicBlock):
-
     _type = "sub_sub_header"
 
 
 class PageBlock(BasicBlock):
-
     _type = "page"
 
     icon = field_map(
@@ -559,32 +542,26 @@ class PageBlock(BasicBlock):
 
 
 class BulletedListBlock(BasicBlock):
-
     _type = "bulleted_list"
 
 
 class NumberedListBlock(BasicBlock):
-
     _type = "numbered_list"
 
 
 class ToggleBlock(BasicBlock):
-
     _type = "toggle"
 
 
 class QuoteBlock(BasicBlock):
-
     _type = "quote"
 
 
 class TextBlock(BasicBlock):
-
     _type = "text"
 
 
 class EquationBlock(BasicBlock):
-
     latex = field_map(
         ["properties", "title"],
         python_to_api=lambda x: [[x]],
@@ -595,7 +572,6 @@ class EquationBlock(BasicBlock):
 
 
 class MediaBlock(Block):
-
     caption = property_map("caption")
 
     def _str_fields(self):
@@ -603,7 +579,6 @@ class MediaBlock(Block):
 
 
 class EmbedBlock(MediaBlock):
-
     _type = "embed"
 
     display_source = field_map(
@@ -630,11 +605,9 @@ class EmbedBlock(MediaBlock):
 
 
 class EmbedOrUploadBlock(EmbedBlock):
-
     file_id = field_map(["file_ids", 0])
 
     def upload_file(self, path):
-
         mimetype = mimetypes.guess_type(path)[0] or "text/plain"
         filename = os.path.split(path)[-1]
 
@@ -655,12 +628,10 @@ class EmbedOrUploadBlock(EmbedBlock):
 
 
 class VideoBlock(EmbedOrUploadBlock):
-
     _type = "video"
 
 
 class FileBlock(EmbedOrUploadBlock):
-
     size = property_map("size")
     title = property_map("title")
 
@@ -668,22 +639,18 @@ class FileBlock(EmbedOrUploadBlock):
 
 
 class AudioBlock(EmbedOrUploadBlock):
-
     _type = "audio"
 
 
 class PDFBlock(EmbedOrUploadBlock):
-
     _type = "pdf"
 
 
 class ImageBlock(EmbedOrUploadBlock):
-
     _type = "image"
 
 
 class BookmarkBlock(EmbedBlock):
-
     _type = "bookmark"
 
     bookmark_cover = field_map("format.bookmark_cover")
@@ -698,18 +665,15 @@ class BookmarkBlock(EmbedBlock):
 
 
 class LinkToCollectionBlock(MediaBlock):
-
     _type = "link_to_collection"
     # TODO: add custom fields
 
 
 class BreadcrumbBlock(MediaBlock):
-
     _type = "breadcrumb"
 
 
 class CollectionViewBlock(MediaBlock):
-
     _type = "collection_view"
 
     @property
@@ -756,11 +720,9 @@ class CollectionViewBlock(MediaBlock):
 
 
 class CollectionViewBlockViews(Children):
-
     child_list_key = "view_ids"
 
     def _get_block(self, view_id):
-
         view = self._client.get_collection_view(
             view_id, collection=self._parent.collection
         )
@@ -804,7 +766,6 @@ class CollectionViewBlockViews(Children):
 
 
 class CollectionViewPageBlock(CollectionViewBlock):
-
     icon = field_map(
         "format.page_icon",
         api_to_python=add_signed_prefix_as_needed,
@@ -821,57 +782,46 @@ class CollectionViewPageBlock(CollectionViewBlock):
 
 
 class FramerBlock(EmbedBlock):
-
     _type = "framer"
 
 
 class TweetBlock(EmbedBlock):
-
     _type = "tweet"
 
 
 class GistBlock(EmbedBlock):
-
     _type = "gist"
 
 
 class DriveBlock(EmbedBlock):
-
     _type = "drive"
 
 
 class FigmaBlock(EmbedBlock):
-
     _type = "figma"
 
 
 class LoomBlock(EmbedBlock):
-
     _type = "loom"
 
 
 class TypeformBlock(EmbedBlock):
-
     _type = "typeform"
 
 
 class CodepenBlock(EmbedBlock):
-
     _type = "codepen"
 
 
 class MapsBlock(EmbedBlock):
-
     _type = "maps"
 
 
 class InvisionBlock(EmbedBlock):
-
     _type = "invision"
 
 
 class CalloutBlock(BasicBlock):
-
     icon = field_map("format.page_icon")
 
     _type = "callout"

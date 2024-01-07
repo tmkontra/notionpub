@@ -324,7 +324,7 @@ description = "Utilities for importing Markdown files to Notion.so"
 optional = false
 python-versions = "*"
 files = []
-develop = false
+develop = true
 
 [package.dependencies]
 mistletoe = ">=0.7.2"
@@ -352,10 +352,8 @@ version = "0.0.28"
 description = "Unofficial Python API client for Notion.so"
 optional = false
 python-versions = ">=3.5"
-files = [
-    {file = "notion-0.0.28-py3-none-any.whl", hash = "sha256:cc380ea2ffe70ee8d5f19244df910cc79ea56a577ca569553d30f8798f0b5b61"},
-    {file = "notion-0.0.28.tar.gz", hash = "sha256:a6c511e1055bb69f05d75220f3f6a5de377a52d42ae38186c3138557c6b4942a"},
-]
+files = []
+develop = true
 
 [package.dependencies]
 bs4 = "*"
@@ -365,6 +363,10 @@ dictdiffer = "*"
 python-slugify = "*"
 requests = "*"
 tzlocal = "*"
+
+[package.source]
+type = "directory"
+url = "src/vendor/notion-py"
 
 [[package]]
 name = "notion-client"
@@ -715,4 +717,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "9ba6b4b6798568f2d7620d80c548c8129d2766ff4033ec51d97ef58648330871"
+content-hash = "bc313ff2aca800b57c59c0bb1b83aaff14d5ede61bf709144f36a118d1bd24f2"

@@ -1,16 +1,20 @@
 from copy import deepcopy
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from notion.client import NotionClient
+
 from .logger import logger
 from .operations import build_operation
 from .utils import extract_id, get_by_path
 
 
 class Record(object):
-
     # if a subclass has a list of ids that should be update when child records are removed, it should specify the key here
     child_list_key = None
 
-    def __init__(self, client, id, *args, **kwargs):
+    def __init__(self, client: "NotionClient", id, *args, **kwargs):
         self._client = client
         self._id = extract_id(id)
         self._callbacks = []

@@ -92,7 +92,7 @@ class NotionClient(object):
         else:
             self._monitor = None
 
-        self._update_user_info()
+        # self._update_user_info()
 
     def start_monitoring(self):
         self._monitor.poll_async()
