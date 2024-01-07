@@ -48,7 +48,7 @@ class Children(object):
     def _content_list(self):
         return self._parent.get(self.child_list_key) or []
 
-    def _get_block(self, id):
+    def _get_block(self, id) -> "Block":
         block = self._client.get_block(id)
 
         # TODO: this is needed because there seems to be a server-side race condition with setting and getting data
@@ -559,6 +559,10 @@ class QuoteBlock(BasicBlock):
 
 class TextBlock(BasicBlock):
     _type = "text"
+
+
+class ParagraphBlock(BasicBlock):
+    _type = "paragraph"
 
 
 class EquationBlock(BasicBlock):

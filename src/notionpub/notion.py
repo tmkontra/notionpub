@@ -40,5 +40,8 @@ class NotionClient:
         for child in children:
             self._client.blocks.delete(child["id"])
 
+    def delete_block(self, block_id):
+        self._client.blocks.delete(block_id)
+
     def create_block(self, parent_id, block):
-        return self._client.blocks.children.append(parent_id, **block)
+        return self._client.blocks.children.append(parent_id, children=[block])

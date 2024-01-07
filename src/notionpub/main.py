@@ -4,12 +4,13 @@ from collections.abc import Mapping
 import os
 import pathlib
 import pprint
+import re
 from typing import Generator, Iterator
-from notion.block import Block, Children
+from notion.block import Block, Children, EmbedOrUploadBlock, ImageBlock
 
 
 from notionpub import config, notion
-from md2notion.upload import convert, upload as md_upload
+from md2notion.upload import convert, relativePathForMarkdownUrl, upload as md_upload
 
 
 parser = argparse.ArgumentParser()
@@ -28,10 +29,66 @@ def main():
         _upload(args.directory, cfg)
 
 
+def paragraph_to_blocks(children, image_handler):
+    rich_text, images = [], []
+
+    def text_to_block(t):
+        print(t)
+        if isinstance(t, str):
+            return {"type": "text", "text": {"content": t}}
+        elif issubclass(t["type"], EmbedOrUploadBlock):
+            # always assumes external file url
+            return image_handler(t)
+        else:
+            return {
+                "type": "text",
+                "text": {
+                    "content": t["title"],
+                },
+                "annotations": {
+                    "bold": t.get("_strong", False),
+                    "italic": t.get("_emphasis", False),
+                    "strikethrough": t.get("_strikethrough", False),
+                    "underline": t.get("_underline", False),
+                    "code": t.get("_code", False),
+                    "color": "default",
+                },
+            }
+
+    for child in children:
+        b = text_to_block(child)
+        if b is None:
+            continue
+        elif b["type"] == "text":
+            rich_text.append(b)
+        elif b["type"] == "image":
+            images.append(b)
+        else:
+            raise ValueError("unsupported paragraph child: " + b["type"])
+    return {"rich_text": rich_text, "children": images}
+
+
 class ChildrenAdapter:
     def __init__(self, parent_id, client: notion.NotionClient) -> None:
         self._parent_id = parent_id
         self._client = client
+
+    def image_handler(self, image_block):
+        if image_block["source"].startswith("http"):
+            return {
+                "type": "image",
+                "image": {
+                    "type": "external",
+                    "external": {"url": image_block["source"]},
+                },
+            }
+        else:
+            return {
+                "type": "text",
+                "text": {
+                    "content": "Image {} was not uploaded".format(image_block["source"])
+                },
+            }
 
     def add_new(self, block_type, child_list_key=None, **kwargs):
         """
@@ -51,16 +108,82 @@ class ChildrenAdapter:
                 "block_type must be a string or a Block subclass with a _type attribute"
             )
 
-        if block_type == "Header":
-            block_content = {}
+        headers = {
+            "header": "heading_1",
+            "sub_header": "heading_2",
+            "sub_sub_header": "heading_3",
+        }
+
+        if block_type in headers.keys():
+            block_type = headers[block_type]
+            block_content = {
+                "object": "block",
+                "type": block_type,
+                block_type: {
+                    "rich_text": [
+                        {"type": "text", "text": {"content": kwargs["title"]}}
+                    ]
+                },
+            }
+        elif block_type == "text":
+            block_type = "paragraph"
+            block_content = {
+                "object": "block",
+                "type": block_type,
+                block_type: {
+                    "rich_text": [
+                        {"type": "text", "text": {"content": kwargs["title"]}}
+                    ]
+                },
+            }
+        elif block_type == "bulleted_list":
+            block_type = "bulleted_list_item"
+            block_content = {
+                "object": "block",
+                "type": block_type,
+                block_type: {
+                    "rich_text": [
+                        {"type": "text", "text": {"content": kwargs["title"]}}
+                    ]
+                },
+            }
+        elif block_type == "paragraph":
+            block_content = {
+                "object": "block",
+                "type": block_type,
+                block_type: paragraph_to_blocks(
+                    kwargs["rich_text"], self.image_handler
+                ),
+            }
+        elif block_type == "numbered_list":
+            block_type = "numbered_list_item"
+            block_content = {
+                "object": "block",
+                "type": block_type,
+                block_type: {
+                    "rich_text": [
+                        {"type": "text", "text": {"content": kwargs["title"]}}
+                    ]
+                },
+            }
         else:
-            raise ValueError("unsupported block type " + block_type)
+            block_content = {
+                "object": "block",
+                "type": block_type,
+                block_type: kwargs,
+            }
+            print(block_content)
+            raise ValueError("unsupported block " + block_type)
 
-        block_id = self._client.create_block(parent_id=self._parent["id"], block={})
-
-        block = self._get_block(block_id)
-
-        return block
+        response = self._client.create_block(
+            parent_id=self._parent_id, block=block_content
+        )
+        if "id" in response:
+            return PageAdapter(response, self._client)
+        if "results" in response:
+            return PageAdapter(response["results"][0], self._client)
+        print("other response", response)
+        return response
 
 
 class PageAdapter(UserDict):
@@ -88,9 +211,10 @@ def _upload(dir: str, cfg: config.ConfigFile):
             target_page = next(
                 filter(lambda p: p["child_page"]["title"] == filepath.name, child_pages)
             )
-            client.clear_page(target_page["id"])
+            client.delete_block(target_page["id"])
         except StopIteration:
-            target_page = client.create_page(parent_page_id, filepath.name)
+            continue
+        target_page = client.create_page(parent_page_id, filepath.name)
         with open(dir / filepath, "r") as f:
             target_page = PageAdapter(target_page, client)
             md_upload(f, target_page)

@@ -5,6 +5,7 @@
 mylib is a library with 
 
 - useful stuff
+  - very nice!
 - more things to use
 - helpful helpers
 

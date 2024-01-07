@@ -6,6 +6,7 @@ from notion.block import (
     CodeBlock,
     DividerBlock,
     HeaderBlock,
+    ParagraphBlock,
     SubheaderBlock,
     SubsubheaderBlock,
     QuoteBlock,
@@ -257,10 +258,10 @@ class NotionPyRenderer(BaseRenderer):
         return self.renderMultipleToStringAndCombine(token.children, blockFunc)
 
     def render_paragraph(self, token):
-        def blockFunc(blockStr):
-            return {"type": TextBlock, "title": blockStr}
-
-        return self.renderMultipleToStringAndCombine(token.children, blockFunc)
+        return {
+            "type": ParagraphBlock,
+            "rich_text": self.renderMultiple(token.children),
+        }
 
     def render_list(self, token):
         # List items themselves are each blocks, so skip it and directly render
@@ -272,8 +273,10 @@ class NotionPyRenderer(BaseRenderer):
         # to render out all the nodes and sort through them to find the string
         # for this item and any children
         rendered = self.renderMultiple(token.children)
-        children = [b for b in rendered if b["type"] != TextBlock]
-        strings = [s["title"] for s in rendered if s["type"] == TextBlock]
+        children = [b for b in rendered if b["type"] != ParagraphBlock]
+        strings = [
+            "".join(s["rich_text"]) for s in rendered if s["type"] == ParagraphBlock
+        ]
         strContent = "".join(strings)
 
         commonAttrs = {"title": strContent, "children": children}
@@ -360,15 +363,22 @@ class NotionPyRenderer(BaseRenderer):
     # notion-py's uploader as it will convert them to the internal Notion.so
     # MD-like formatting
     def render_strong(self, token):
-        return self.renderMultipleToStringAndCombine(
-            token.children, lambda s: f"**{s}**"
-        )
+        def renderer(token):
+            return {"type": TextBlock, "_strong": True, "title": token}
+
+        return self.renderMultipleToStringAndCombine(token.children, renderer)
 
     def render_emphasis(self, token):
-        return self.renderMultipleToStringAndCombine(token.children, lambda s: f"*{s}*")
+        def renderer(token):
+            return {"type": TextBlock, "_emphasis": True, "title": token}
+
+        return self.renderMultipleToStringAndCombine(token.children, renderer)
 
     def render_inline_code(self, token):
-        return self.renderMultipleToStringAndCombine(token.children, lambda s: f"`{s}`")
+        def renderer(token):
+            return {"type": TextBlock, "_code": True, "title": token}
+
+        return self.renderMultipleToStringAndCombine(token.children, renderer)
 
     def render_raw_text(self, token):
         return token.content
@@ -396,6 +406,9 @@ class NotionPyRenderer(BaseRenderer):
             "source": token.src,
             "caption": alt,
         }
+
+    def render_raw_text(self, token):
+        return super().render_raw_text(token)
 
     class __HTMLParser(HTMLParser):
         def __init__(self):
