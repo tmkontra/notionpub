@@ -96,7 +96,6 @@ def uploadBlock(blockDescriptor: dict, blockParent: PageBlock, mdFilePath):
             print(f"ERROR: Local image '{imgRelSrc}' not found to upload. Skipping...")
             return
         newBlock: EmbedOrUploadBlock = newBlock
-        print(f"Uploading file '{imgSrc}'")
         newBlock.upload_file(str(imgSrc))
     elif isinstance(newBlock, CollectionViewBlock):
         raise ValueError("CollectionViewBlock upload is not supported")

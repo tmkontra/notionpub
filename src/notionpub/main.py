@@ -10,7 +10,11 @@ from notion.block import Block, Children, EmbedOrUploadBlock, ImageBlock
 
 
 from notionpub import config, notion
-from md2notion.upload import convert, relativePathForMarkdownUrl, upload as md_upload
+from md2notion.upload import (
+    convert,
+    relativePathForMarkdownUrl,
+    uploadBlock as md_upload_block,
+)
 
 
 parser = argparse.ArgumentParser()
@@ -40,12 +44,9 @@ def paragraph_to_blocks(children, image_handler):
             # always assumes external file url
             return image_handler(t)
         else:
-            return {
-                "type": "text",
-                "text": {
-                    "content": t["title"],
-                },
-                "annotations": {
+            return notion.BlockFactory().new_text_block(
+                t["title"],
+                **{
                     "bold": t.get("_strong", False),
                     "italic": t.get("_emphasis", False),
                     "strikethrough": t.get("_strikethrough", False),
@@ -53,7 +54,7 @@ def paragraph_to_blocks(children, image_handler):
                     "code": t.get("_code", False),
                     "color": "default",
                 },
-            }
+            )
 
     for child in children:
         b = text_to_block(child)
@@ -72,6 +73,7 @@ class ChildrenAdapter:
     def __init__(self, parent_id, client: notion.NotionClient) -> None:
         self._parent_id = parent_id
         self._client = client
+        self._blocks = []
 
     def image_handler(self, image_block):
         if image_block["source"].startswith("http"):
@@ -83,12 +85,10 @@ class ChildrenAdapter:
                 },
             }
         else:
-            return {
-                "type": "text",
-                "text": {
-                    "content": "Image {} was not uploaded".format(image_block["source"])
-                },
-            }
+            return notion.BlockFactory().new_text_block(
+                "Image {} was not uploaded".format(image_block["source"]),
+                color="red",
+            )
 
     def add_new(self, block_type, child_list_key=None, **kwargs):
         """
@@ -114,15 +114,14 @@ class ChildrenAdapter:
             "sub_sub_header": "heading_3",
         }
 
+        block_factory = notion.BlockFactory()
         if block_type in headers.keys():
             block_type = headers[block_type]
             block_content = {
                 "object": "block",
                 "type": block_type,
                 block_type: {
-                    "rich_text": [
-                        {"type": "text", "text": {"content": kwargs["title"]}}
-                    ]
+                    "rich_text": [block_factory.new_text_block(kwargs["title"])]
                 },
             }
         elif block_type == "text":
@@ -131,9 +130,7 @@ class ChildrenAdapter:
                 "object": "block",
                 "type": block_type,
                 block_type: {
-                    "rich_text": [
-                        {"type": "text", "text": {"content": kwargs["title"]}}
-                    ]
+                    "rich_text": [block_factory.new_text_block(kwargs["title"])]
                 },
             }
         elif block_type == "bulleted_list":
@@ -142,9 +139,7 @@ class ChildrenAdapter:
                 "object": "block",
                 "type": block_type,
                 block_type: {
-                    "rich_text": [
-                        {"type": "text", "text": {"content": kwargs["title"]}}
-                    ]
+                    "rich_text": [block_factory.new_text_block(kwargs["title"])]
                 },
             }
         elif block_type == "paragraph":
@@ -161,9 +156,7 @@ class ChildrenAdapter:
                 "object": "block",
                 "type": block_type,
                 block_type: {
-                    "rich_text": [
-                        {"type": "text", "text": {"content": kwargs["title"]}}
-                    ]
+                    "rich_text": [block_factory.new_text_block(kwargs["title"])]
                 },
             }
         else:
@@ -202,22 +195,28 @@ def _upload(dir: str, cfg: config.ConfigFile):
     dir_pages = {}
     for dirname, subdir in dirs.items():
         _upload_dir(client, parent, dirname, subdir, [], dir_pages)
-    for parent_parts, filepath in files.items():
-        parent_page_id = dir_pages[parent_parts]["id"]
-        child_pages = [
-            c for c in client.get_children(parent_page_id) if c["type"] == "child_page"
-        ]
-        try:
-            target_page = next(
-                filter(lambda p: p["child_page"]["title"] == filepath.name, child_pages)
-            )
-            client.delete_block(target_page["id"])
-        except StopIteration:
-            continue
-        target_page = client.create_page(parent_page_id, filepath.name)
-        with open(dir / filepath, "r") as f:
-            target_page = PageAdapter(target_page, client)
-            md_upload(f, target_page)
+    for parent_parts, filepaths in files.items():
+        for filepath in filepaths:
+            parent_page_id = dir_pages[parent_parts]["id"]
+            child_pages = [
+                c
+                for c in client.get_children(parent_page_id)
+                if c["type"] == "child_page"
+            ]
+            try:
+                target_page = next(
+                    filter(
+                        lambda p: p["child_page"]["title"] == filepath.name, child_pages
+                    )
+                )
+                client.delete_block(target_page["id"])
+            except StopIteration:
+                continue
+            target_page = client.create_page(parent_page_id, filepath.name)
+            with open(dir / filepath, "r") as f:
+                target_page = PageAdapter(target_page, client)
+                for block in convert(f):
+                    md_upload_block(block, target_page, dir / filepath)
 
 
 def _upload_dir(client: notion.NotionClient, parent, dirname, subdir, parts, dir_pages):
@@ -255,7 +254,7 @@ def _tree(paths: Iterator[pathlib.PurePath]):
         sub = trie
         for part in p.parent.parts:
             sub = sub[part]
-        files[p.parent.parts] = p
+        files[p.parent.parts].append(p)
     return trie, files
 
 

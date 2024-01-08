@@ -45,3 +45,33 @@ class NotionClient:
 
     def create_block(self, parent_id, block):
         return self._client.blocks.children.append(parent_id, children=[block])
+
+
+class BlockFactory:
+    def __init__(self):
+        return
+
+    def new_text_block(
+        self,
+        content,
+        bold=False,
+        italic=False,
+        strikethrough=False,
+        underline=False,
+        code=False,
+        color=None,
+    ):
+        return {
+            "type": "text",
+            "text": {
+                "content": content,
+            },
+            "annotations": {
+                "bold": bold,
+                "italic": italic,
+                "strikethrough": strikethrough,
+                "underline": underline,
+                "code": code,
+                "color": color or "default",
+            },
+        }
