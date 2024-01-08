@@ -13,7 +13,6 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.10"
 md2notion = { path = "src/vendor/md2notion/", develop = true }
-notion = { path = "src/vendor/notion-py/", develop = true }
 mistletoe = ">=0.7.2"
 requests = ">=2.22.0"
 marshmallow = "^3.20.1"

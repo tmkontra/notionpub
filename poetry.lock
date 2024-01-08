@@ -352,8 +352,10 @@ version = "0.0.28"
 description = "Unofficial Python API client for Notion.so"
 optional = false
 python-versions = ">=3.5"
-files = []
-develop = true
+files = [
+    {file = "notion-0.0.28-py3-none-any.whl", hash = "sha256:cc380ea2ffe70ee8d5f19244df910cc79ea56a577ca569553d30f8798f0b5b61"},
+    {file = "notion-0.0.28.tar.gz", hash = "sha256:a6c511e1055bb69f05d75220f3f6a5de377a52d42ae38186c3138557c6b4942a"},
+]
 
 [package.dependencies]
 bs4 = "*"
@@ -363,10 +365,6 @@ dictdiffer = "*"
 python-slugify = "*"
 requests = "*"
 tzlocal = "*"
-
-[package.source]
-type = "directory"
-url = "src/vendor/notion-py"
 
 [[package]]
 name = "notion-client"
@@ -717,4 +715,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "bc313ff2aca800b57c59c0bb1b83aaff14d5ede61bf709144f36a118d1bd24f2"
+content-hash = "71a0137c34aa1df5cb486cbfac8e54c3c30c381d09e8cf8e85e5968e6f7208cd"
